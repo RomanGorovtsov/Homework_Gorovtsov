@@ -10,9 +10,17 @@ repositories {
 }
 
 dependencies {
+    testImplementation 'io.cucumber:cucumber-java:7.15.0'
+
+    testImplementation 'io.cucumber:cucumber-junit-platform-engine:7.15.0'
+
+    testImplementation 'org.junit.platform:junit-platform-suite-api:1.10.1'
+    testRuntimeOnly 'org.junit.platform:junit-platform-suite-engine:1.10.1'
+
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
     implementation 'net.datafaker:datafaker:2.5.4'
     implementation 'com.github.lalyos:jfiglet:0.0.8'
 }
