@@ -10,7 +10,11 @@ repositories {
 }
 
 dependencies {
+    compileOnly 'org.projectlombok:lombok:1.18.40'
+    annotationProcessor 'org.projectlombok:lombok:1.18.40'
+    testImplementation 'io.rest-assured:rest-assured:5.5.0'
     testImplementation 'io.cucumber:cucumber-java:7.15.0'
+    testImplementation 'com.fasterxml.jackson.core:jackson-databind:2.22.1'
 
     testImplementation 'io.cucumber:cucumber-junit-platform-engine:7.15.0'
 
