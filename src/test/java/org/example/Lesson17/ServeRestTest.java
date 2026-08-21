@@ -1,7 +1,10 @@
 package org.example.Lesson17;
 
 import io.restassured.RestAssured;
+import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.http.ContentType;
+import io.restassured.filter.log.LogDetail;
+import io.restassured.specification.RequestSpecification;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -12,23 +15,38 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class ServeRestTest {
+class ServeRestTest {
 
-    private static final String BASE_URI = "https://serverest.dev/";
+    private static final String BASE_URI = "https://serverest.dev";
+    private static final String PASSWORD = "secret123";
+
+    private static final String MSG_USER_CREATED = "Cadastro realizado com sucesso";
+    private static final String MSG_USER_UPDATED = "Registro alterado com sucesso";
+    private static final String MSG_LOGIN_SUCCESS = "Login realizado com sucesso";
+    private static final String MSG_USER_DELETED = "Registro excluído com sucesso";
+    private static final String MSG_USER_NOT_FOUND = "Usuário não encontrado";
+
+    private static RequestSpecification baseSpec;
+
     private static String userId;
     private static String uniqueEmail;
     private static String token;
 
     @BeforeAll
     static void setUp() {
-        RestAssured.baseURI = BASE_URI;
         RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
+        baseSpec = new RequestSpecBuilder()
+                .setBaseUri(BASE_URI)
+                .setContentType(ContentType.JSON)
+                .log(LogDetail.ALL)
+                .build();
     }
 
     @Test
     @Order(1)
     void shouldGetAllUsers() {
         given()
+                .spec(baseSpec)
                 .when()
                 .get("/usuarios")
                 .then()
@@ -42,6 +60,7 @@ public class ServeRestTest {
     @Order(2)
     void shouldFindUserByEmail() {
         String firstUserEmail = given()
+                .spec(baseSpec)
                 .when()
                 .get("/usuarios")
                 .then()
@@ -51,6 +70,7 @@ public class ServeRestTest {
                 .path("usuarios[0].email");
 
         given()
+                .spec(baseSpec)
                 .queryParam("email", firstUserEmail)
                 .when()
                 .get("/usuarios")
@@ -63,66 +83,45 @@ public class ServeRestTest {
     @Test
     @Order(3)
     void shouldCreateNewUser() {
-        uniqueEmail = "spy_HOMER" + System.currentTimeMillis() + "@qa.com";
-        String requestBody = """
-                {
-                    "nome": "Тайный Покупатель",
-                    "email": "%s",
-                    "password": "secret123",
-                    "administrador": "true"
-                }
-                """.formatted(uniqueEmail);
+        uniqueEmail = generateUniqueEmail();
 
         userId = given()
-                .contentType(ContentType.JSON)
-                .body(requestBody)
+                .spec(baseSpec)
+                .body(usuarioJson("Тайный Покупатель", uniqueEmail, "true"))
                 .when()
                 .post("/usuarios")
                 .then()
                 .statusCode(201)
-                .body("message", equalTo("Cadastro realizado com sucesso"))
-                .extract().path("_id");
+                .body("message", equalTo(MSG_USER_CREATED))
+                .extract()
+                .path("_id");
     }
 
     @Test
     @Order(4)
     void shouldUpdateUser() {
-        String requestBody = """
-                {
-                    "nome": "Обновлённый Покупатель",
-                    "email": "%s",
-                    "password": "secret123",
-                    "administrador": "false"
-                }
-                """.formatted(uniqueEmail);
         given()
-                .contentType(ContentType.JSON)
+                .spec(baseSpec)
                 .pathParam("id", userId)
-                .body(requestBody)
+                .body(usuarioJson("Обновлённый Покупатель", uniqueEmail, "false"))
                 .when()
                 .put("/usuarios/{id}")
                 .then()
                 .statusCode(200)
-                .body("message", equalTo("Registro alterado com sucesso"));
+                .body("message", equalTo(MSG_USER_UPDATED));
     }
 
     @Test
     @Order(5)
     void shouldLogin() {
-        String requestBody = """
-                {
-                    "email": "%s",
-                    "password": "secret123"
-                }
-                """.formatted(uniqueEmail);
         token = given()
-                .contentType(ContentType.JSON)
-                .body(requestBody)
+                .spec(baseSpec)
+                .body(loginJson(uniqueEmail))
                 .when()
                 .post("/login")
                 .then()
                 .statusCode(200)
-                .body("message", equalTo("Login realizado com sucesso"))
+                .body("message", equalTo(MSG_LOGIN_SUCCESS))
                 .body("authorization", notNullValue())
                 .extract()
                 .path("authorization");
@@ -132,27 +131,30 @@ public class ServeRestTest {
     @Order(6)
     void shouldDeleteUser() {
         given()
+                .spec(baseSpec)
                 .header("Authorization", token)
-                .contentType(ContentType.JSON)
+                .pathParam("id", userId)
                 .when()
-                .delete("/usuarios/" + userId)
+                .delete("/usuarios/{id}")
                 .then()
                 .statusCode(200)
-                .body("message", equalTo("Registro excluído com sucesso"));
+                .body("message", equalTo(MSG_USER_DELETED));
 
         given()
+                .spec(baseSpec)
+                .pathParam("id", userId)
                 .when()
-                .contentType(ContentType.JSON)
-                .get("/usuarios/" + userId)
+                .get("/usuarios/{id}")
                 .then()
                 .statusCode(400)
-                .body("message", equalTo("Usuário não encontrado"));
+                .body("message", equalTo(MSG_USER_NOT_FOUND));
     }
 
     @Test
     @Order(7)
-    void shouldGetAllProducts(){
+    void shouldGetAllProducts() {
         given()
+                .spec(baseSpec)
                 .when()
                 .get("/produtos")
                 .then()
@@ -165,23 +167,48 @@ public class ServeRestTest {
 
     @Test
     @Order(8)
-    void shouldCreateNewUserFromDto(){
-        uniqueEmail = "spy_HOMER" + System.currentTimeMillis() + "@qa.com";
+    void shouldCreateNewUserFromDto() {
+        uniqueEmail = generateUniqueEmail();
         Usuario userDto = new Usuario(
                 "Тайный Покупатель",
                 uniqueEmail,
-                "secret123",
+                PASSWORD,
                 "true"
         );
 
         userId = given()
-                .contentType(ContentType.JSON)
-                .body(userDto) // Просто передаем объект сюда! Rest Assured сам сделает из него JSON
+                .spec(baseSpec)
+                .body(userDto)
                 .when()
                 .post("/usuarios")
                 .then()
                 .statusCode(201)
-                .body("message", equalTo("Cadastro realizado com sucesso"))
-                .extract().path("_id");
+                .body("message", equalTo(MSG_USER_CREATED))
+                .extract()
+                .path("_id");
+    }
+
+    private static String generateUniqueEmail() {
+        return "spy_HOMER" + System.currentTimeMillis() + "@qa.com";
+    }
+
+    private static String usuarioJson(String nome, String email, String administrador) {
+        return """
+                {
+                    "nome": "%s",
+                    "email": "%s",
+                    "password": "%s",
+                    "administrador": "%s"
+                }
+                """.formatted(nome, email, PASSWORD, administrador);
+    }
+
+    private static String loginJson(String email) {
+        return """
+                {
+                    "email": "%s",
+                    "password": "%s"
+                }
+                """.formatted(email, PASSWORD);
     }
 }
