@@ -1,4 +1,4 @@
-package org.example.Lesson19.Pages;
+package org.example.Lesson19.pages;
 
 import com.codeborne.selenide.SelenideElement;
 import org.openqa.selenium.By;
@@ -41,11 +41,11 @@ public class LoginPage {
 
     public SecureAreaPage clickLoginSuccess() {
         loginButton.click();
-        return new SecureAreaPage(); // При успешном входе возвращаем защищенную страницу
+        return new SecureAreaPage();
     }
 
     public LoginPage clickLoginWithButton() {
         loginButton.click();
-        return this; // При ошибке остаемся на этой же странице
+        return this;
     }
 }

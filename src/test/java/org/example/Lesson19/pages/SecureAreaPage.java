@@ -1,4 +1,4 @@
-package org.example.Lesson19.Pages;
+package org.example.Lesson19.pages;
 
 import com.codeborne.selenide.SelenideElement;
 import org.openqa.selenium.By;
@@ -23,7 +23,7 @@ public class SecureAreaPage {
 
     public LoginPage clickLogout() {
         logoutButton.click();
-        return new LoginPage(); // После логаута возвращаемся на страницу логина
+        return new LoginPage();
     }
 }
 
